@@ -14,18 +14,18 @@ def shuffle_deck():
 
 
 def standard_deck():
-    standard_deck = []
+    a_standard_deck = []
     card_colour = 0
-    while len(standard_deck) != 52:
+    while len(a_standard_deck) != 52:
         colour_set = 0
         card_number = 1
         while colour_set != 13:
-            standard_deck.append((card_colour, card_number))
+            a_standard_deck.append((card_colour, card_number))
             card_number += 1
             colour_set += 1
         card_colour += 1
 
-    return standard_deck
+    return a_standard_deck
 
 
 def starting_deck():
@@ -69,7 +69,7 @@ def visible_card_list(visible_cards, column1, column2, column3, column4, column5
         try:
             if column[-1] not in visible_cards:
                 visible_cards.append(column[-1])
-        except:
+        except IndexError:
             pass
 
     top_card(column1)
@@ -117,33 +117,37 @@ def draw_board(win, column1, column2, column3, column4, column5, column6, column
                 colour = (250, 250, 250)
                 # card background
                 pygame.draw.rect(win, colour, (
-                30 + cc * (card_width + 15), row * count * 40 + card_height + 20, card_width, card_height))
+                        30 + cc * (card_width + 15), row * count * 40 + card_height + 20, card_width, card_height))
                 # outline:
                 pygame.draw.rect(win, (0, 0, 0), (
-                30 + cc * (card_width + 15), row * count * 40 + row * card_height + 20, card_width, card_height), 1)
+                        30 + cc * (card_width + 15), row * count * 40 + row * card_height + 20, card_width, card_height), 1)
                 # symbol and number
                 win.blit(label, (40 + cc * (card_width + 15), row * count * 40 + card_height + 20))
 
             else:
                 # draw blue cards
                 pygame.draw.rect(win, (0, 0, (100 + (count * 20))), (
-                30 + cc * (card_width + 15), row * count * 40 + row * card_height + 20, card_width, card_height))
+                        30 + cc * (card_width + 15), row * count * 40 + row * card_height + 20, card_width, card_height))
                 pygame.draw.rect(win, (0, 0, 0), (
-                30 + cc * (card_width + 15), row * count * 40 + row * card_height + 20, card_width, card_height), 1)
+                        30 + cc * (card_width + 15), row * count * 40 + row * card_height + 20, card_width, card_height), 1)
 
+            # draw a yellow line around this card if selected by the player:
             def draw_selection():
                 pygame.draw.rect(win, (200, 200, 0), (
-                30 + cc * (card_width + 15), row * count * 40 + row * card_height + 20, card_width, card_height), 5)
+                        30 + cc * (card_width + 15), row * count * 40 + row * card_height + 20, card_width, card_height), 5)
 
+            # see if the card being drawn is the card the player selected, first by finding which column, -
             if 30 + cc * (card_width + 15) <= mpos_x <= 30 + (cc + 1) * (card_width + 15) - 15:
+                # - then consider if the top card is clicked:
                 if (card_type, card_number) == column[-1]:
                     if row * count * 40 + row * card_height + 20 <= mpos_y <= row * count * 40 + row * card_height + card_height + 19:
                         draw_selection()
+                # - or if one the cards underneath the top card is clicked, in which case the area to click on is smaller.
                 else:
                     if row * count * 40 + row * card_height + 20 <= mpos_y <= row * count * 40 + card_height + row * 40 + 19:
                         draw_selection()
 
-    # pick a place to start building a deck of cards. cc = columns
+    # select which column of cards to draw. cc = columns
     for cc in range(7):
         for row in range(2):
             if row == 1:
@@ -196,6 +200,12 @@ def main():
     win = pygame.display.set_mode((width, height))
     win.fill((0, 55, 0))
     flag = True
+    mpos_x = mpos_y = 0
+    visible_cards = visible_card_list(visible_cards, column1, column2, column3, column4, column5, column6,
+                                      column7, discard_column)
+    draw_board(win, column1, column2, column3, column4, column5, column6, column7, drawing_column,
+               discard_column, card_width, card_height,
+               visible_cards, final_column1, final_column2, final_column3, final_column4, mpos_x, mpos_y)
 
     while flag:
 
