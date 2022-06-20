@@ -84,105 +84,128 @@ def visible_card_list(visible_cards, column1, column2, column3, column4, column5
     return visible_cards
 
 
-def draw_board(win, column1, column2, column3, column4, column5, column6, column7, drawing_column, discard_column,
-               card_width, card_height,
-               visible_cards, final_column1, final_column2, final_column3, final_column4, mpos_x, mpos_y):
+def selected_card(win, column1, column2, column3, column4, column5, column6, column7, drawing_column, discard_column,
+                visible_cards, final_column1, final_column2, final_column3, final_column4, mpos_x, mpos_y, previous_selection):
     def draw_cards(column):
+        # constants:
         pygame.font.init()
         font = pygame.font.SysFont('linuxlibertinegregular', 40)
+        card_width = 150; card_height = 200; corner_radius = 10
+        white = (250, 250, 250); black = (0, 0, 0); red = (200, 0, 0); yellow = (200, 200, 0)
+        
+        # variables:
+        selection = []
         count = 0
+        
+        # now for every card in the list we're looking through:
         for card_type, card_number in column:
+            # keep track of which card is currently worked on:
+            count += 1
             # split cardtypes and -numbers
             if card_type == 0:
                 card_symbol = '♠'
-                card_colour = (0, 0, 0)
+                card_colour = black
             elif card_type == 1:
                 card_symbol = '♥'
-                card_colour = (200, 0, 0)
+                card_colour = red
             elif card_type == 2:
                 card_symbol = '♣'
-                card_colour = (0, 0, 0)
+                card_colour = black
             else:
                 card_symbol = '♦'
-                card_colour = (200, 0, 0)
+                card_colour = red
 
-            # build cardtype and -number
-            label = font.render(f'{card_symbol}{card_number}', True, card_colour)
-            count += 1
-            if count >= 8:
-                count = 7
+            # determine the location of the top left of the card on the board:
+            card_location_y = (row * count * 40 + row * card_height + 20)
+            card_location_x = (30 + cc * (card_width + 15))
 
+            # determine which whether the current card is visible or closed:
             if (card_type, card_number) in visible_cards:
                 # draw white cards with number and symbol
-                colour = (250, 250, 250)
+                
                 # card background
-                pygame.draw.rect(win, colour, (
-                        30 + cc * (card_width + 15), row * count * 40 + card_height + 20, card_width, card_height))
+                pygame.draw.rect(win, white, (card_location_x, card_location_y, card_width, card_height), 0, corner_radius)
                 # outline:
-                pygame.draw.rect(win, (0, 0, 0), (
-                        30 + cc * (card_width + 15), row * count * 40 + row * card_height + 20, card_width, card_height), 1)
+                pygame.draw.rect(win, black, (card_location_x, card_location_y, card_width, card_height), 1, corner_radius)
                 # symbol and number
-                win.blit(label, (40 + cc * (card_width + 15), row * count * 40 + card_height + 20))
+                label = font.render(f'{card_symbol}{card_number}', True, card_colour)
+                win.blit(label, (10 + card_location_x, card_location_y))
 
             else:
                 # draw blue cards
-                pygame.draw.rect(win, (0, 0, (100 + (count * 20))), (
-                        30 + cc * (card_width + 15), row * count * 40 + row * card_height + 20, card_width, card_height))
-                pygame.draw.rect(win, (0, 0, 0), (
-                        30 + cc * (card_width + 15), row * count * 40 + row * card_height + 20, card_width, card_height), 1)
+                colour_count = count
+                if colour_count >= 8:
+                    colour_count = 7
+                pygame.draw.rect(win, (0, 0, (100 + (colour_count * 20))), (
+                        card_location_x, card_location_y, card_width, card_height), 0, corner_radius)
+                pygame.draw.rect(win, black, (
+                        card_location_x, card_location_y, card_width, card_height), 1, corner_radius)
 
             # draw a yellow line around this card if selected by the player:
             def draw_selection():
-                pygame.draw.rect(win, (200, 200, 0), (
-                        30 + cc * (card_width + 15), row * count * 40 + row * card_height + 20, card_width, card_height), 5)
+                pygame.draw.rect(win, yellow, (card_location_x, card_location_y, card_width, card_height), 3, corner_radius)
+
+            def add_card():
+                if previous_selection == []:
+                    draw_selection()
+                if previous_selection != []:
+                    # print(f'previous_selection {previous_selection}')
+                    for card in previous_selection:
+                        if card not in column:
+                            column.append(card)
+                    # previous_selection = []
+                selection.append((card_type, card_number))
 
             # see if the card being drawn is the card the player selected, first by finding which column, -
-            if 30 + cc * (card_width + 15) <= mpos_x <= 30 + (cc + 1) * (card_width + 15) - 15:
+            if card_location_x <= mpos_x <= 30 + (cc + 1) * (card_width + 15) - 15:
                 # - then consider if the top card is clicked:
-                if (card_type, card_number) == column[-1]:
-                    if row * count * 40 + row * card_height + 20 <= mpos_y <= row * count * 40 + row * card_height + card_height + 19:
-                        draw_selection()
-                # - or if one the cards underneath the top card is clicked, in which case the area to click on is smaller.
-                else:
-                    if row * count * 40 + row * card_height + 20 <= mpos_y <= row * count * 40 + card_height + row * 40 + 19:
-                        draw_selection()
+                    if card_location_y <= mpos_y <= row * count * 40 + row * card_height + card_height + 19:
+                        add_card()
+                    elif card_location_y <= mpos_y <= row * count * 40 + card_height + row * 40 + 19:
+                        add_card()
+                      
+        return selection
 
-    # select which column of cards to draw. cc = columns
+    selection1 = []
+    # select which column of cards to draw and possibly select. cc = columns
     for cc in range(7):
         for row in range(2):
             if row == 1:
                 if cc == 0:
-                    draw_cards(column1)
+                    possible_selection = draw_cards(column1)
                 elif cc == 1:
-                    draw_cards(column2)
+                    possible_selection = draw_cards(column2)
                 elif cc == 2:
-                    draw_cards(column3)
+                    possible_selection = draw_cards(column3)
                 elif cc == 3:
-                    draw_cards(column4)
+                    possible_selection = draw_cards(column4)
                 elif cc == 4:
-                    draw_cards(column5)
+                    possible_selection = draw_cards(column5)
                 elif cc == 5:
-                    draw_cards(column6)
+                    possible_selection = draw_cards(column6)
                 elif cc == 6:
-                    draw_cards(column7)
+                    possible_selection = draw_cards(column7)
 
             else:
                 if cc == 0:
-                    draw_cards(final_column1)
+                    possible_selection = draw_cards(final_column1)
                 elif cc == 1:
-                    draw_cards(final_column2)
+                    possible_selection = draw_cards(final_column2)
                 elif cc == 2:
-                    draw_cards(final_column3)
+                    possible_selection = draw_cards(final_column3)
                 elif cc == 3:
-                    draw_cards(final_column4)
+                    possible_selection = draw_cards(final_column4)
                 elif cc == 4:
                     pass
                 elif cc == 5:
-                    draw_cards(discard_column)
+                    possible_selection = draw_cards(discard_column)
                 elif cc == 6:
-                    draw_cards(drawing_column)
-
+                    possible_selection = draw_cards(drawing_column)
+                    
+        if possible_selection != []:
+            selection1 = possible_selection
     pygame.display.update()
+    return selection1
 
 
 def main():
@@ -191,24 +214,23 @@ def main():
     # generate empty lists for the:
     visible_cards = []; final_column1 = []; final_column2 = []; final_column3 = []; final_column4 = []
     discard_column = []
-    width = 1200
-    height = 800
-    card_width = 150
-    card_height = 200
+    
     pygame.init()
     pygame.display.set_caption('Solitaire door Alexander')
-    win = pygame.display.set_mode((width, height))
+    win = pygame.display.set_mode((1200, 800))
     win.fill((0, 55, 0))
     flag = True
     mpos_x = mpos_y = 0
+    empty_selection = 0
+    previous_selection = []
+    # make all top cards front-facing (visible) cards:
     visible_cards = visible_card_list(visible_cards, column1, column2, column3, column4, column5, column6,
                                       column7, discard_column)
-    draw_board(win, column1, column2, column3, column4, column5, column6, column7, drawing_column,
-               discard_column, card_width, card_height,
-               visible_cards, final_column1, final_column2, final_column3, final_column4, mpos_x, mpos_y)
+    # draw the start-up board for the first time:
+    selected_card(win, column1, column2, column3, column4, column5, column6, column7, drawing_column,
+               discard_column, visible_cards, final_column1, final_column2, final_column3, final_column4, mpos_x, mpos_y, previous_selection)
 
     while flag:
-
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 sys.exit()
@@ -216,13 +238,28 @@ def main():
             if event.type == pygame.MOUSEBUTTONDOWN:
                 # get the position of the mouse
                 mpos_x, mpos_y = event.pos
-                # check for new front-facing (visible) cards
+                
                 visible_cards = visible_card_list(visible_cards, column1, column2, column3, column4, column5, column6,
-                                                  column7, discard_column)
+                                                    column7, discard_column)
+
                 # draw the playing field
-                draw_board(win, column1, column2, column3, column4, column5, column6, column7, drawing_column,
-                           discard_column, card_width, card_height,
-                           visible_cards, final_column1, final_column2, final_column3, final_column4, mpos_x, mpos_y)
+                selection1 = selected_card(win, column1, column2, column3, column4, column5, column6, column7, drawing_column,
+                           discard_column, visible_cards, final_column1, final_column2, final_column3, final_column4, mpos_x, mpos_y, previous_selection)
+                
+                print(f'previous_selection {previous_selection}')
+                print(f'selection {selection1}')
+                print(f'empty {empty_selection}')
+
+                if selection1 != [] and empty_selection != 1:
+                    if previous_selection == selection1:
+                        previous_selection = []
+                        empty_selection = 0
+                    else:
+                        previous_selection = selection1
+                        empty_selection += 1
+                else:
+                    previous_selection = []
+                    empty_selection = 0
 
 
 if __name__ == "__main__":
